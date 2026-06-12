@@ -8,31 +8,74 @@ It reads the data from a JSON file, converts it to a CSV file, and then creates 
 The graph is saved as a PNG file and displayed on the screen.
 """
 
+def read_json_to_dataframe(input_file):
+    """
+    Converting JSON file to a Pandas DataFrame and cleaning the data
+
+    Args:
+        input_file (file or string): The file object or path to the JSON file 
+
+    Returns:
+        eva_df (pd.DataFrame): The processed DataFrame
+    """
+    print(f'Reading JSON file {input_file}')
+    # Read the data from a JSON file into a Pandas dataframe
+    eva_df = pd.read_json(input_file, convert_dates=['date'], encoding='ascii')
+    eva_df['eva'] = eva_df['eva'].astype(float)
+    # Clean the data by removing any rows where duration is missing
+    eva_df.dropna(axis=0, subset=['duration', 'date'], inplace=True)
+    
+    return eva_df
+
+
+def write_dataframe_to_csv(df, output_file):
+    """
+    Writing a dataframe generated from json file to a csv file
+
+    Args:
+        df (pd.DataFrame): The DataFrame to write to CSV
+        output_file (file or string): The file object or path to the CSV file
+    """
+    print(f'Saving to CSV file {output_file}')
+    # Save dataframe to CSV file for later analysis
+    df.to_csv(output_file, index=False, encoding='utf-8')
+
+
+def plot_cumulative_time_in_space(df, graph_file):
+    """
+    Plotting data from a data frame and saving the png file
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing the EVA data
+        graph_file (file or string): The file object or path to the PNG file
+    """
+    print(f'Plotting cumulative spacewalk duration and saving to {graph_file}')
+    df['duration_hours'] = df['duration'].str.split(":").apply(lambda x: int(x[0]) + int(x[1])/60)
+    df['cumulative_time'] = df['duration_hours'].cumsum()
+    plt.plot(df['date'], df['cumulative_time'], 'ko-')
+    plt.xlabel('Year')
+    plt.ylabel('Total time spent in space to date (hours)')
+    plt.tight_layout()
+    plt.savefig(graph_file)
+    plt.show()
+
+# Main code
+print("--START--")
+
 input_file = open('./eva-data.json', 'r', encoding='ascii')
-output_file = open('./eva-data.csv','w', encoding="utf-8")
-graph_file = 'cumulative_eva_graph.png'
+output_file = open('./eva-data.csv', 'w', encoding='utf-8')
+graph_file = './cumulative_eva_graph.png'
 
-#reading a json file and converting into a dataframe
-eva_df = pd.read_json(input_file, convert_dates=['date'], encoding='ascii')
-#converting eva column to float and dropping na values from the duration and data columns
-eva_df['eva'] = eva_df['eva'].astype(float)
-eva_df.dropna(axis=0, subset=['duration', 'date'], inplace=True)
+# Read the data from JSON file
+eva_data = read_json_to_dataframe(input_file)
 
-#writing the file to a csv file
-eva_df.to_csv(output_file, index=False, encoding='utf-8')
+# Convert and export data to CSV file
+write_dataframe_to_csv(eva_data, output_file)
 
-#sorting the dataframe by date
-eva_df.sort_values('date', inplace=True)
+# Sort dataframe by date ready to be plotted (date values are on x-axis)
+eva_data.sort_values('date', inplace=True)
 
-#convert duration from "HH:MM" format to hours as a float
-eva_df['duration_hours'] = eva_df['duration'].str.split(":").apply(lambda x: int(x[0]) + int(x[1])/60)
-#calculating cululative time spend in space over the years
-eva_df['cumulative_time'] = eva_df['duration_hours'].cumsum()
+# Plot cumulative time spent in space over years
+plot_cumulative_time_in_space(eva_data, graph_file)
 
-#plotting the cumulative time spend in space over the years
-plt.plot(eva_df['date'], eva_df['cumulative_time'], 'ko-')
-plt.xlabel('Year')
-plt.ylabel('Total time spent in space to date (hours)')
-plt.tight_layout()
-plt.savefig(graph_file)
-plt.show()
+print("--END--")
