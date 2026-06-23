@@ -109,7 +109,7 @@ def add_duration_hours(df):
     return df_copy
 
 if __name__ == "__main__":
-    if len(sys.argv) <3:
+    if len(sys.argv) < 3:
         input_file = './data/eva-data.json'
         output_file = './results/eva-data.csv'
         print(f'Using default input and output filenames')
